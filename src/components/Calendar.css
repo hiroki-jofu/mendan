@@ -1,0 +1,40 @@
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.day-cell {
+  border: 1px solid #ddd;
+  min-height: 100px; /* 日付セルの高さを設定 */
+  padding: 4px;
+}
+
+.day-cell.not-current-month {
+  background-color: #f9f9f9;
+  color: #ccc;
+}
+
+.day-cell .day-number {
+  font-size: 0.9em;
+}
+
+.today .day-number {
+  background-color: #0d6efd; /* BootstrapのPrimaryカラー */
+  color: white;
+  border-radius: 50%;
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+}
+
+.diary-preview {
+  font-size: 0.75em;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* 3行まで表示 */
+  -webkit-box-orient: vertical;
+}
