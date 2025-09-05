@@ -14,7 +14,7 @@ const categoryOptions = [
 const createNewRecord = (): InterviewRecord => ({
   id: Date.now().toString() + Math.random().toString(36),
   studentName: '',
-  studentGrade: '',
+  studentGrade: '1', // デフォルト値を'1'に設定
   studentDepartment: departmentOptions[0],
   category: categoryOptions[0],
   content: ''
@@ -89,7 +89,11 @@ const InterviewModal: React.FC<InterviewModalProps> = ({ date, records, onClose,
                   </div>
                   <div className="col-md-4">
                     <label className="form-label">学年</label>
-                    <input type="text" className="form-control" value={record.studentGrade} onChange={(e) => handleRecordChange(record.id, 'studentGrade', e.target.value)} />
+                    <select className="form-select" value={record.studentGrade} onChange={(e) => handleRecordChange(record.id, 'studentGrade', e.target.value)}>
+                        {Array.from({ length: 7 }, (_, i) => i + 1).map(grade => (
+                            <option key={grade} value={grade}>{grade}</option>
+                        ))}
+                    </select>
                   </div>
                   <div className="col-md-4">
                     <label className="form-label">学生所属</label>
