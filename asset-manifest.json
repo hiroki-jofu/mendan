@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/mendan/static/css/main.5c308236.css",
-    "main.js": "/mendan/static/js/main.3fab4b09.js",
+    "main.js": "/mendan/static/js/main.f65538f2.js",
     "static/js/453.437942cb.chunk.js": "/mendan/static/js/453.437942cb.chunk.js",
     "index.html": "/mendan/index.html",
     "main.5c308236.css.map": "/mendan/static/css/main.5c308236.css.map",
-    "main.3fab4b09.js.map": "/mendan/static/js/main.3fab4b09.js.map",
+    "main.f65538f2.js.map": "/mendan/static/js/main.f65538f2.js.map",
     "453.437942cb.chunk.js.map": "/mendan/static/js/453.437942cb.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.5c308236.css",
-    "static/js/main.3fab4b09.js"
+    "static/js/main.f65538f2.js"
   ]
 }
