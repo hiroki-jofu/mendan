@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import './Calendar.css';
-import { DiaryEntry } from '../App'; // App.tsxから型をインポート
+import { InterviewData } from '../App'; // App.tsxから型をインポート
 
-// 日付をYYYY-MM-DD形式の文字列に変換するヘルパー関数
 const formatDate = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 interface CalendarProps {
   onDateClick: (date: Date) => void;
-  diaries: DiaryEntry[];
+  interviews: InterviewData[];
+  highlightDates: string[];
 }
 
-const Calendar: React.FC<CalendarProps> = ({ onDateClick, diaries }) => {
+const Calendar: React.FC<CalendarProps> = ({ onDateClick, interviews, highlightDates }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const goToPreviousMonth = () => {
@@ -46,7 +49,7 @@ const Calendar: React.FC<CalendarProps> = ({ onDateClick, diaries }) => {
 
     const calendarDays = [];
 
-    // Days from previous month
+    // 前月の日付
     for (let i = 0; i < startDay; i++) {
       const day = new Date(year, month, i - startDay + 1);
       calendarDays.push(
@@ -56,29 +59,32 @@ const Calendar: React.FC<CalendarProps> = ({ onDateClick, diaries }) => {
       );
     }
 
-    // Days of current month
+    // 今月の日付
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
       const dateStr = formatDate(date);
       const isToday = dateStr === formatDate(today);
-      const diary = diaries.find(d => d.date === dateStr);
+      const interviewData = interviews.find(d => d.date === dateStr);
+      const isHighlighted = highlightDates.includes(dateStr);
 
       const dayClasses = ['day-cell'];
       if (isToday) dayClasses.push('today');
+      if (isHighlighted) dayClasses.push('highlight');
 
       calendarDays.push(
         <div key={dateStr} className={dayClasses.join(' ')} onClick={() => onDateClick(date)}>
           <div className="day-number">{i}</div>
-          {diary && (
+          {interviewData && interviewData.records && interviewData.records.length > 0 && (
             <div className="diary-preview">
-              {diary.content}
+              {/* プレビューには学生名を表示 */}
+              {interviewData.records.map(r => r.studentName).join(', ')}
             </div>
           )}
         </div>
       );
     }
 
-    // Days from next month
+    // 来月の日付
     const remainingCells = 42 - calendarDays.length;
     for (let i = 1; i <= remainingCells; i++) {
       const day = new Date(year, month + 1, i);
@@ -98,22 +104,24 @@ const Calendar: React.FC<CalendarProps> = ({ onDateClick, diaries }) => {
   const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-3">
+    <div className="card">
+      <div className="card-header calendar-header">
         <button className="btn btn-outline-primary" onClick={goToPreviousMonth}>&lt; 前月</button>
-        <div className="d-flex align-items-center">
-          <select className="form-select me-2" style={{ width: '110px' }} value={year} onChange={handleYearChange}>
-            {yearOptions.map(y => <option key={y} value={y}>{y}年</option>)}
+        <div className="calendar-controls d-flex align-items-center">
+          <select className="form-select" style={{ minWidth: '7em' }} value={year} onChange={handleYearChange}>
+            {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <select className="form-select" value={month} onChange={handleMonthChange}>
-            {monthOptions.map(m => <option key={m} value={m}>{m}月</option>)}
+          <span className="mx-2">年</span>
+          <select className="form-select" style={{ minWidth: '6em' }} value={month} onChange={handleMonthChange}>
+            {monthOptions.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
+          <span className="ms-2">月</span>
         </div>
         <button className="btn btn-outline-primary" onClick={goToNextMonth}>次月 &gt;</button>
       </div>
       <div className="calendar-grid text-center">
         {['日', '月', '火', '水', '木', '金', '土'].map(day => (
-          <div key={day} className="fw-bold border py-2">{day}</div>
+          <div key={day} className="fw-bold border-bottom py-2">{day}</div>
         ))}
         {renderCalendar()}
       </div>

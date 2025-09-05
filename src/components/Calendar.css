@@ -7,6 +7,12 @@
   border: 1px solid #ddd;
   min-height: 100px; /* 日付セルの高さを設定 */
   padding: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.day-cell:hover {
+  background-color: #f8f9fa;
 }
 
 .day-cell.not-current-month {
@@ -37,4 +43,23 @@
   display: -webkit-box;
   -webkit-line-clamp: 3; /* 3行まで表示 */
   -webkit-box-orient: vertical;
+}
+
+/* 検索ハイライト用のスタイル */
+.day-cell.highlight {
+  background-color: #fff3cd; /* 薄い黄色 */
+}
+
+.calendar-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 0.5rem;
+}
+
+.calendar-controls {
+  grid-column: 2;
+  justify-self: center;
+  display: flex;
+  align-items: center;
 }
