@@ -1,22 +1,15 @@
 import React, { useState } from 'react';
-import './Calendar.css';
-import { InterviewData } from '../App'; // App.tsxから型をインポート
-
-const formatDate = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+import styles from './Calendar.module.css';
+import useInterviewStore from '../store';
+import { format } from 'date-fns';
 
 interface CalendarProps {
   onDateClick: (date: Date) => void;
-  interviews: InterviewData[];
-  highlightDates: string[];
 }
 
-const Calendar: React.FC<CalendarProps> = ({ onDateClick, interviews, highlightDates }) => {
+const Calendar: React.FC<CalendarProps> = ({ onDateClick }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const interviews = useInterviewStore((state) => state.interviews);
 
   const goToPreviousMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -53,8 +46,8 @@ const Calendar: React.FC<CalendarProps> = ({ onDateClick, interviews, highlightD
     for (let i = 0; i < startDay; i++) {
       const day = new Date(year, month, i - startDay + 1);
       calendarDays.push(
-        <div key={formatDate(day)} className="day-cell not-current-month" onClick={() => onDateClick(day)}>
-          <div className="day-number">{day.getDate()}</div>
+        <div key={format(day, 'yyyy-MM-dd')} className={`${styles['day-cell']} ${styles['not-current-month']}`} onClick={() => onDateClick(day)}>
+          <div className={styles['day-number']}>{day.getDate()}</div>
         </div>
       );
     }
@@ -62,21 +55,18 @@ const Calendar: React.FC<CalendarProps> = ({ onDateClick, interviews, highlightD
     // 今月の日付
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
-      const dateStr = formatDate(date);
-      const isToday = dateStr === formatDate(today);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const isToday = dateStr === format(today, 'yyyy-MM-dd');
       const interviewData = interviews.find(d => d.date === dateStr);
-      const isHighlighted = highlightDates.includes(dateStr);
 
-      const dayClasses = ['day-cell'];
-      if (isToday) dayClasses.push('today');
-      if (isHighlighted) dayClasses.push('highlight');
+      const dayClasses = [styles['day-cell']];
+      if (isToday) dayClasses.push(styles.today);
 
       calendarDays.push(
         <div key={dateStr} className={dayClasses.join(' ')} onClick={() => onDateClick(date)}>
-          <div className="day-number">{i}</div>
-          {interviewData && interviewData.records && interviewData.records.length > 0 && (
-            <div className="diary-preview">
-              {/* プレビューには学生名を表示 */}
+          <div className={styles['day-number']}>{i}</div>
+          {interviewData && Array.isArray(interviewData.records) && interviewData.records.length > 0 && (
+            <div className={styles['diary-preview']}>
               {interviewData.records.map(r => r.studentName).join(', ')}
             </div>
           )}
@@ -89,8 +79,8 @@ const Calendar: React.FC<CalendarProps> = ({ onDateClick, interviews, highlightD
     for (let i = 1; i <= remainingCells; i++) {
       const day = new Date(year, month + 1, i);
       calendarDays.push(
-        <div key={formatDate(day)} className="day-cell not-current-month" onClick={() => onDateClick(day)}>
-          <div className="day-number">{day.getDate()}</div>
+        <div key={format(day, 'yyyy-MM-dd')} className={`${styles['day-cell']} ${styles['not-current-month']}`} onClick={() => onDateClick(day)}>
+          <div className={styles['day-number']}>{day.getDate()}</div>
         </div>
       );
     }
@@ -105,9 +95,9 @@ const Calendar: React.FC<CalendarProps> = ({ onDateClick, interviews, highlightD
 
   return (
     <div className="card">
-      <div className="card-header calendar-header">
+      <div className={`card-header ${styles['calendar-header']}`}>
         <button className="btn btn-outline-primary" onClick={goToPreviousMonth}>&lt; 前月</button>
-        <div className="calendar-controls d-flex align-items-center">
+        <div className={`${styles['calendar-controls']} d-flex align-items-center`}>
           <select className="form-select" style={{ minWidth: '7em' }} value={year} onChange={handleYearChange}>
             {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
@@ -119,7 +109,7 @@ const Calendar: React.FC<CalendarProps> = ({ onDateClick, interviews, highlightD
         </div>
         <button className="btn btn-outline-primary" onClick={goToNextMonth}>次月 &gt;</button>
       </div>
-      <div className="calendar-grid text-center">
+      <div className={`${styles['calendar-grid']} text-center`}>
         {['日', '月', '火', '水', '木', '金', '土'].map(day => (
           <div key={day} className="fw-bold border-bottom py-2">{day}</div>
         ))}

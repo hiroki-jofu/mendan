@@ -1,61 +1,62 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Calendar from './components/Calendar';
 import InterviewModal from './components/InterviewModal';
-import './App.css'; // 作成したCSSをインポート
+import Header from './components/Header';
+import SearchResultList from './components/SearchResultList';
 
-// データ構造の定義
-export interface InterviewRecord {
-  id: string; // 各記録の一意なID
-  studentName: string;
-  studentGrade: string;
-  studentDepartment: string;
-  category: string;
-  content: string;
-}
+import useInterviewStore from './store';
+import { InterviewRecord, InterviewData } from './types';
+import styles from './App.module.css';
+import { format } from 'date-fns';
 
-export interface InterviewData {
-  date: string;
-  records: InterviewRecord[];
-}
-
-const formatDate = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-function App() {
-  const [interviews, setInterviews] = useState<InterviewData[]>(() => {
-    const saved = localStorage.getItem('interviews');
-    return saved ? JSON.parse(saved) : [];
-  });
-
+const MainApp: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isMenuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [fontSize, setFontSize] = useState(16);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    localStorage.setItem('interviews', JSON.stringify(interviews));
-  }, [interviews]);
+  const {
+    interviews,
+    addInterview,
+    updateInterview,
+    deleteInterview,
+    deleteAllInterviews,
+    setInterviews,
+  } = useInterviewStore();
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}px`;
   }, [fontSize]);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [menuRef]);
+  const filteredInterviews = useMemo(() => {
+    if (!searchQuery) return interviews;
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    return interviews
+      .map(interview => {
+        if (!interview || !Array.isArray(interview.records)) return { ...interview, records: [] };
+        const filteredRecords = interview.records.filter(
+          record =>
+            (record.studentName && record.studentName.toLowerCase().includes(lowerCaseQuery)) ||
+            (record.studentGrade && record.studentGrade.toLowerCase().includes(lowerCaseQuery)) ||
+            (record.studentDepartment && record.studentDepartment.toLowerCase().includes(lowerCaseQuery)) ||
+            (record.category && record.category.toLowerCase().includes(lowerCaseQuery)) ||
+            (record.content && record.content.toLowerCase().includes(lowerCaseQuery))
+        );
+        return { ...interview, records: filteredRecords };
+      })
+      .filter(interview => interview.records.length > 0);
+  }, [searchQuery, interviews]);
+
+  const matchingRecords = useMemo(() => {
+    if (!searchQuery) return [];
+    return filteredInterviews.flatMap(interview =>
+      interview.records.map(record => ({ ...record, date: interview.date }))
+    );
+  }, [searchQuery, filteredInterviews]);
+
+  const currentInterviewData = useMemo(() => 
+    selectedDate ? interviews.find(i => i.date === format(selectedDate, 'yyyy-MM-dd')) : undefined
+  , [selectedDate, interviews]);
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
@@ -65,162 +66,147 @@ function App() {
     setSelectedDate(null);
   };
 
-  // 保存処理（新しいデータ構造に対応）
   const handleSave = (records: InterviewRecord[]) => {
     if (!selectedDate) return;
-    const dateStr = formatDate(selectedDate);
-    const index = interviews.findIndex(i => i.date === dateStr);
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const existingInterview = interviews.find(i => i.date === dateStr);
 
-    // recordsが空の場合は、その日付のデータを削除
     if (records.length === 0) {
-      setInterviews(interviews.filter(i => i.date !== dateStr));
+      if (existingInterview) {
+        deleteInterview(dateStr);
+      }
     } else {
-      const newInterviewData = { date: dateStr, records };
-      if (index > -1) {
-        const updated = [...interviews];
-        updated[index] = newInterviewData;
-        setInterviews(updated);
+      if (existingInterview) {
+        updateInterview(dateStr, records);
       } else {
-        setInterviews([...interviews, newInterviewData]);
+        addInterview(dateStr, records);
       }
     }
     handleModalClose();
   };
 
-  // 日付単位での削除処理
   const handleDeleteDate = () => {
     if (!selectedDate) return;
-    const dateStr = formatDate(selectedDate);
-    setInterviews(interviews.filter(i => i.date !== dateStr));
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    deleteInterview(dateStr);
     handleModalClose();
   };
 
   const handleDeleteAll = () => {
-    setMenuOpen(false);
     if (window.confirm('本当にすべての記録を削除しますか？\nこの操作は元に戻せません。')) {
-      setInterviews([]);
+      deleteAllInterviews();
     }
   };
 
-  // CSV形式での書き出し処理
   const handleExportCsv = () => {
-    setMenuOpen(false);
     if (interviews.length === 0) {
       alert('書き出す記録がありません。');
       return;
     }
-
     const escapeCsvCell = (cell: string) => {
       if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
         return `"${cell.replace(/"/g, '""')}"`;
       }
       return cell;
     };
-
     const headers = ['面談日', '氏名', '学年', '学生所属', '面談カテゴリー', '本文'];
     const rows = interviews.flatMap(interview => {
-      if (!interview || !Array.isArray(interview.records)) {
-        return []; // 不正なデータはスキップ
-      }
-      return interview.records.map(record => [
-        interview.date,
-        record.studentName,
-        record.studentGrade,
-        record.studentDepartment,
-        record.category,
-        record.content
-      ].map(escapeCsvCell).join(','));
+      if (!interview || !Array.isArray(interview.records)) return [];
+      return interview.records.map(record =>
+        [interview.date, record.studentName, record.studentGrade, record.studentDepartment, record.category, record.content]
+          .map(escapeCsvCell)
+          .join(',')
+      );
     });
-
     const csvContent = [headers.join(','), ...rows].join('\n');
-    // BOMを先頭に付与してExcelでの文字化けを防ぐ
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
     const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `mendan_kiroku_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `mendan_kiroku_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  const filteredInterviews = useMemo(() => {
-    if (!searchQuery) return interviews;
-    const lowerCaseQuery = searchQuery.toLowerCase();
-    return interviews.map(interview => {
-      // interviewやinterview.recordsが存在しない、または配列でない場合を考慮
-      if (!interview || !Array.isArray(interview.records)) {
-        return { ...interview, records: [] };
-      }
-      const filteredRecords = interview.records.filter(record => 
-        (record.studentName && record.studentName.toLowerCase().includes(lowerCaseQuery)) ||
-        (record.studentGrade && record.studentGrade.toLowerCase().includes(lowerCaseQuery)) ||
-        (record.studentDepartment && record.studentDepartment.toLowerCase().includes(lowerCaseQuery)) ||
-        (record.category && record.category.toLowerCase().includes(lowerCaseQuery)) ||
-        (record.content && record.content.toLowerCase().includes(lowerCaseQuery))
-      );
-      return { ...interview, records: filteredRecords };
-    }).filter(interview => interview.records.length > 0);
-  }, [searchQuery, interviews]);
+  const handleBackupToFile = () => {
+    if (interviews.length === 0) {
+      alert('バックアップする記録がありません。');
+      return;
+    }
+    const jsonContent = JSON.stringify(interviews, null, 2);
+    const blob = new Blob([jsonContent], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `面談記録バックアップ_${format(new Date(), 'yyyy-MM-dd')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
-  const currentInterviewData = selectedDate 
-    ? interviews.find(i => i.date === formatDate(selectedDate)) 
-    : undefined;
+  const handleRestoreFromFile = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const parsedData: InterviewData[] = JSON.parse(content);
+
+        if (!Array.isArray(parsedData) || (parsedData.length > 0 && !parsedData.every(item => 'date' in item && 'records' in item && Array.isArray(item.records)))) {
+          alert('選択されたファイルの形式が正しくありません。');
+          return;
+        }
+        
+        if (window.confirm('現在の記録を上書きしてインポートしますか？\nこの操作は元に戻せません。')) {
+          setInterviews(parsedData);
+          alert('記録をインポートしました。');
+        }
+
+      } catch (error) {
+        alert('ファイルの読み込みまたは解析に失敗しました。');
+        console.error("File import error:", error);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
 
   return (
-    <div className="container py-4">
-      <header className="pb-3 mb-4 app-header">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h1 className="fs-4 mb-0 app-title">面談記録アプリ</h1>
-          <div className="position-relative" ref={menuRef}>
-            <button className="btn btn-outline-secondary" onClick={() => setMenuOpen(!isMenuOpen)}>
-              メニュー
-            </button>
-            {isMenuOpen && (
-              <div className="card position-absolute" style={{ width: '250px', top: '100%', right: 0, zIndex: 10 }}>
-                <ul className="list-group list-group-flush">
-                  <li className="list-group-item list-group-item-action" onClick={handleExportCsv} style={{ cursor: 'pointer' }}>
-                    記録をExcel形式で書き出す
-                  </li>
-                  <li className="list-group-item list-group-item-action text-danger" onClick={handleDeleteAll} style={{ cursor: 'pointer' }}>
-                    全記録を削除
-                  </li>
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="row g-3 align-items-center">
-          <div className="col-md-6">
-            <input 
-              type="text"
-              className="form-control"
-              placeholder="氏名、学年、カテゴリ、本文で検索..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="col-md-6 d-flex align-items-center justify-content-end">
-            <label className="form-label me-3 mb-0">文字サイズ:</label>
-            <div className="btn-group" role="group">
-              <button type="button" className={`btn btn-outline-primary ${fontSize === 14 ? 'active' : ''}`} onClick={() => setFontSize(14)}>小</button>
-              <button type="button" className={`btn btn-outline-primary ${fontSize === 16 ? 'active' : ''}`} onClick={() => setFontSize(16)}>普通</button>
-              <button type="button" className={`btn btn-outline-primary ${fontSize === 19 ? 'active' : ''}`} onClick={() => setFontSize(19)}>大</button>
-              <button type="button" className={`btn btn-outline-primary ${fontSize === 22 ? 'active' : ''}`} onClick={() => setFontSize(22)}>特大</button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className={`${styles.container} container py-4`}>
+      <Header
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        fontSize={fontSize}
+        onFontSizeChange={setFontSize}
+        onExportCsv={handleExportCsv}
+        onBackupToFile={handleBackupToFile}
+        onRestoreFromFile={handleRestoreFromFile}
+        onDeleteAll={handleDeleteAll}
+      />
 
       <main>
-        <Calendar onDateClick={handleDateClick} interviews={interviews} highlightDates={searchQuery ? filteredInterviews.map(i => i.date) : []} />
+        {searchQuery ? (
+          <SearchResultList searchQuery={searchQuery} matchingRecords={matchingRecords} />
+        ) : (
+          <Calendar onDateClick={handleDateClick} />
+        )}
       </main>
 
       {selectedDate && (
-        <InterviewModal 
+        <InterviewModal
+          show={!!selectedDate}
           date={selectedDate}
           records={currentInterviewData?.records || []}
           onClose={handleModalClose}
@@ -232,8 +218,31 @@ function App() {
       <footer className="pt-3 mt-4 text-muted border-top">
         <p className="mb-0">&copy; 2025</p>
       </footer>
+
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileSelect} 
+        accept=".txt" 
+        style={{ display: 'none' }} 
+      />
     </div>
   );
+};
+
+
+function App() {
+  const { isInitialized, initializeApp } = useInterviewStore();
+
+  useEffect(() => {
+    initializeApp();
+  }, [initializeApp]);
+
+  if (!isInitialized) {
+    return null; 
+  }
+
+  return <MainApp />;
 }
 
 export default App;

@@ -8,8 +8,8 @@ interface HeaderProps {
   fontSize: number;
   onFontSizeChange: (size: number) => void;
   onExportCsv: () => void;
-  onExportJson: () => void; // 追加
-  onImportJson: () => void; // 追加
+  onBackupToFile: () => void;
+  onRestoreFromFile: () => void;
   onDeleteAll: () => void;
 }
 
@@ -19,8 +19,8 @@ const Header: React.FC<HeaderProps> = ({
   fontSize, 
   onFontSizeChange, 
   onExportCsv, 
-  onExportJson, 
-  onImportJson, 
+  onBackupToFile,
+  onRestoreFromFile,
   onDeleteAll 
 }) => {
   const [isMenuOpen, setMenuOpen] = useState(false);
@@ -49,14 +49,14 @@ const Header: React.FC<HeaderProps> = ({
     onDeleteAll();
   }
 
-  const handleExportJsonClick = () => {
+  const handleBackupToFileClick = () => {
     setMenuOpen(false);
-    onExportJson();
+    onBackupToFile();
   };
 
-  const handleImportJsonClick = () => {
+  const handleRestoreFromFileClick = () => {
     setMenuOpen(false);
-    onImportJson();
+    onRestoreFromFile();
   };
 
   return (
@@ -71,16 +71,16 @@ const Header: React.FC<HeaderProps> = ({
             メニュー
           </button>
           {isMenuOpen && (
-            <div className="card position-absolute" style={{ width: '250px', top: '100%', right: 0, zIndex: 10 }}>
+            <div className="card position-absolute" style={{ width: '280px', top: '100%', right: 0, zIndex: 10 }}>
               <ul className="list-group list-group-flush">
                 <li className="list-group-item list-group-item-action" onClick={handleExport} style={{ cursor: 'pointer' }}>
                   記録をExcel形式で書き出す
                 </li>
-                <li className="list-group-item list-group-item-action" onClick={handleExportJsonClick} style={{ cursor: 'pointer' }}>
-                  記録をJSON形式で書き出す
+                <li className="list-group-item list-group-item-action" onClick={handleBackupToFileClick} style={{ cursor: 'pointer' }}>
+                  データをファイルにバックアップ
                 </li>
-                <li className="list-group-item list-group-item-action" onClick={handleImportJsonClick} style={{ cursor: 'pointer' }}>
-                  記録をJSON形式で読み込む
+                <li className="list-group-item list-group-item-action" onClick={handleRestoreFromFileClick} style={{ cursor: 'pointer' }}>
+                  バックアップファイルから復元
                 </li>
                 <li className="list-group-item list-group-item-action text-danger" onClick={handleDelete} style={{ cursor: 'pointer' }}>
                   全記録を削除

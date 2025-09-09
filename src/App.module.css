@@ -50,18 +50,32 @@ body {
 
 .form-control, .form-select {
   border-radius: var(--border-radius);
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  border-color: var(--text-color-light);
 }
 
 .card {
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
   border: none;
+  background-color: var(--card-bg);
+  color: var(--text-color);
 }
 
 .modal-content {
   border-radius: var(--border-radius);
+  background-color: var(--card-bg);
+  color: var(--text-color);
+}
+
+/* 面談記録ブロックのスタイル調整 */
+.p-3.mb-3.border.rounded.position-relative.shadow-sm {
+  background-color: var(--card-bg);
 }
 
 .list-group-item {
   transition: background-color 0.2s;
+  background-color: var(--card-bg);
+  color: var(--text-color);
 }

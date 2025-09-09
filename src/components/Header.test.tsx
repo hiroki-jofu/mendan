@@ -6,8 +6,8 @@ describe('Header', () => {
   const mockOnSearchChange = jest.fn();
   const mockOnFontSizeChange = jest.fn();
   const mockOnExportCsv = jest.fn();
-  const mockOnExportJson = jest.fn();
-  const mockOnImportJson = jest.fn();
+  const mockOnBackupToFile = jest.fn();
+  const mockOnRestoreFromFile = jest.fn();
   const mockOnDeleteAll = jest.fn();
 
   afterEach(() => {
@@ -22,8 +22,8 @@ describe('Header', () => {
         fontSize={16}
         onFontSizeChange={mockOnFontSizeChange}
         onExportCsv={mockOnExportCsv}
-        onExportJson={mockOnExportJson}
-        onImportJson={mockOnImportJson}
+        onBackupToFile={mockOnBackupToFile}
+        onRestoreFromFile={mockOnRestoreFromFile}
         onDeleteAll={mockOnDeleteAll}
       />
     );
@@ -42,8 +42,8 @@ describe('Header', () => {
         fontSize={16}
         onFontSizeChange={mockOnFontSizeChange}
         onExportCsv={mockOnExportCsv}
-        onExportJson={mockOnExportJson}
-        onImportJson={mockOnImportJson}
+        onBackupToFile={mockOnBackupToFile}
+        onRestoreFromFile={mockOnRestoreFromFile}
         onDeleteAll={mockOnDeleteAll}
       />
     );

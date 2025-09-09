@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { InterviewRecord } from '../App';
-
-// 定数
-const departmentOptions = [
-  "教育学部", "人文学部", "理学部", "工学部", "都市デザイン学部",
-  "人文社会芸術総合研究科", "理工学研究科", "教職実践開発研究科", "その他"
-];
-const categoryOptions = [
-  "個人面談", "志願票指導", "小論文指導", "模擬授業", "集団論文"
-];
+import { Modal, Button } from 'react-bootstrap';
+import { InterviewRecord } from '../types';
+import { departmentOptions, categoryOptions } from '../constants';
+import { format } from 'date-fns';
 
 // 新しい空の記録を作成するヘルパー関数
 const createNewRecord = (): InterviewRecord => ({
@@ -21,6 +15,7 @@ const createNewRecord = (): InterviewRecord => ({
 });
 
 interface InterviewModalProps {
+  show: boolean;
   date: Date;
   records: InterviewRecord[];
   onClose: () => void;
@@ -28,38 +23,76 @@ interface InterviewModalProps {
   onDeleteDate: () => void;
 }
 
-const InterviewModal: React.FC<InterviewModalProps> = ({ date, records, onClose, onSave, onDeleteDate }) => {
+const InterviewModal: React.FC<InterviewModalProps> = ({ show, date, records, onClose, onSave, onDeleteDate }) => {
   const [localRecords, setLocalRecords] = useState<InterviewRecord[]>([]);
+  // 各レコードのエラーを管理するための状態
+  const [errors, setErrors] = useState<{[id: string]: {[field: string]: string}}>({});
 
   useEffect(() => {
-    // モーダルが開かれたときに、propsのrecordsをローカルstateにコピーする
-    // recordsが空（新規）の場合、空の入力欄を1つ表示する
     setLocalRecords(records.length > 0 ? records.map(r => ({...r})) : [createNewRecord()]);
-  }, [records]);
+    setErrors({}); // モーダルが開かれるたびにエラーをリセット
+  }, [records, show]);
 
-  // 記録のフィールドを更新する関数
   const handleRecordChange = (id: string, field: keyof InterviewRecord, value: string) => {
     setLocalRecords(localRecords.map(r => r.id === id ? { ...r, [field]: value } : r));
+    // 入力があったらそのフィールドのエラーをクリア
+    setErrors(prevErrors => {
+      const newErrors = { ...prevErrors };
+      if (newErrors[id]) {
+        delete newErrors[id][field];
+        if (Object.keys(newErrors[id]).length === 0) {
+          delete newErrors[id];
+        }
+      }
+      return newErrors;
+    });
   };
 
-  // 新しい記録欄を追加する関数
   const addRecord = () => {
     setLocalRecords([...localRecords, createNewRecord()]);
   };
 
-  // 記録欄を削除する関数
   const removeRecord = (id: string) => {
     setLocalRecords(localRecords.filter(r => r.id !== id));
+    setErrors(prevErrors => {
+      const newErrors = { ...prevErrors };
+      delete newErrors[id];
+      return newErrors;
+    });
   };
 
-  // 保存処理
   const handleSave = () => {
-    // 空のレコードは保存しない
+    const newErrors: {[id: string]: {[field: string]: string}} = {};
+    let hasError = false;
+
+    localRecords.forEach(record => {
+      const recordErrors: {[field: string]: string} = {};
+      if (record.studentName.trim() === '') {
+        recordErrors.studentName = '氏名は必須です。';
+        hasError = true;
+      }
+      if (record.content.trim() === '') {
+        recordErrors.content = '本文は必須です。';
+        hasError = true;
+      }
+
+      if (Object.keys(recordErrors).length > 0) {
+        newErrors[record.id] = recordErrors;
+      }
+    });
+
+    setErrors(newErrors);
+
+    if (hasError) {
+      alert('必須項目が入力されていません。');
+      return;
+    }
+
+    // 空のレコードは保存しない（バリデーションで必須項目チェックしているので、実質不要になるが念のため）
     const recordsToSave = localRecords.filter(r => r.studentName.trim() !== '' || r.content.trim() !== '');
     onSave(recordsToSave);
   };
 
-  // 日付ごとの削除処理
   const handleDelete = () => {
     if (window.confirm('この日のすべての記録を削除しますか？')) {
       onDeleteDate();
@@ -67,75 +100,79 @@ const InterviewModal: React.FC<InterviewModalProps> = ({ date, records, onClose,
   };
 
   return (
-    <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">{date.toLocaleDateString('ja-JP')} の面談記録</h5>
-            <button type="button" className="btn-close" onClick={onClose}></button>
-          </div>
-          <div className="modal-body">
-            {localRecords.map((record, index) => (
-              <div key={record.id} className="p-3 mb-3 border rounded position-relative shadow-sm bg-light">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h6 className="mb-0 text-primary">記録 {index + 1}</h6>
-                  <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeRecord(record.id)}>この記録を削除</button>
-                </div>
-                <div className="row g-3">
-                  {/* 学生情報 */}
-                  <div className="col-md-4">
-                    <label className="form-label">氏名</label>
-                    <input type="text" className="form-control" value={record.studentName} onChange={(e) => handleRecordChange(record.id, 'studentName', e.target.value)} />
-                  </div>
-                  <div className="col-md-4">
-                    <label className="form-label">学年</label>
-                    <select className="form-select" value={record.studentGrade} onChange={(e) => handleRecordChange(record.id, 'studentGrade', e.target.value)}>
-                        {Array.from({ length: 7 }, (_, i) => i + 1).map(grade => (
-                            <option key={grade} value={grade}>{grade}</option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="col-md-4">
-                    <label className="form-label">学生所属</label>
-                    <select className="form-select" value={record.studentDepartment} onChange={(e) => handleRecordChange(record.id, 'studentDepartment', e.target.value)}>
-                      {departmentOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                  </div>
-                  {/* 面談内容 */}
-                  <div className="col-12">
-                    <label className="form-label">面談カテゴリー</label>
-                    <select className="form-select" value={record.category} onChange={(e) => handleRecordChange(record.id, 'category', e.target.value)}>
-                      {categoryOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                  </div>
-                  <div className="col-12">
-                    <label className="form-label">本文</label>
-                    <textarea
-                      className="form-control"
-                      rows={8}
-                      value={record.content}
-                      onChange={(e) => handleRecordChange(record.id, 'content', e.target.value)}
-                    ></textarea>
-                  </div>
-                </div>
+    <Modal show={show} onHide={onClose} size="xl" centered scrollable>
+      <Modal.Header closeButton>
+        <Modal.Title>{format(date, 'yyyy年M月d日')} の面談記録</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {localRecords.map((record, index) => (
+          <div key={record.id} className="p-3 mb-3 border rounded position-relative shadow-sm">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="mb-0 text-primary">記録 {index + 1}</h6>
+              <Button variant="outline-danger" size="sm" onClick={() => removeRecord(record.id)}>この記録を削除</Button>
+            </div>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <label className="form-label">氏名</label>
+                <input 
+                  type="text" 
+                  className={`form-control ${errors[record.id]?.studentName ? 'is-invalid' : ''}`} 
+                  value={record.studentName} 
+                  onChange={(e) => handleRecordChange(record.id, 'studentName', e.target.value)} 
+                />
+                {errors[record.id]?.studentName && (
+                  <div className="invalid-feedback d-block">{errors[record.id].studentName}</div>
+                )}
               </div>
-            ))}
-            <button type="button" className="btn btn-primary" onClick={addRecord}>
-              ＋ 面談記録を追加
-            </button>
-          </div>
-          <div className="modal-footer justify-content-between">
-            <button type="button" className="btn btn-danger" onClick={handleDelete} disabled={records.length === 0}>
-              この日の記録を全て削除
-            </button>
-            <div>
-              <button type="button" className="btn btn-secondary me-2" onClick={onClose}>閉じる</button>
-              <button type="button" className="btn btn-primary" onClick={handleSave}>保存</button>
+              <div className="col-md-4">
+                <label className="form-label">学年</label>
+                <select className="form-select" value={record.studentGrade} onChange={(e) => handleRecordChange(record.id, 'studentGrade', e.target.value)}>
+                    {Array.from({ length: 7 }, (_, i) => i + 1).map(grade => (
+                        <option key={grade} value={grade}>{grade}</option>
+                    ))}
+                </select>
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">学生所属</label>
+                <select className="form-select" value={record.studentDepartment} onChange={(e) => handleRecordChange(record.id, 'studentDepartment', e.target.value)}>
+                  {departmentOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}を
+                </select>
+              </div>
+              <div className="col-12">
+                <label className="form-label">面談カテゴリー</label>
+                <select className="form-select" value={record.category} onChange={(e) => handleRecordChange(record.id, 'category', e.target.value)}>
+                  {categoryOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              </div>
+              <div className="col-12">
+                <label className="form-label">本文</label>
+                <textarea
+                  className={`form-control ${errors[record.id]?.content ? 'is-invalid' : ''}`}
+                  rows={8}
+                  value={record.content}
+                  onChange={(e) => handleRecordChange(record.id, 'content', e.target.value)}
+                ></textarea>
+                {errors[record.id]?.content && (
+                  <div className="invalid-feedback d-block">{errors[record.id].content}</div>
+                )}
+              </div>
             </div>
           </div>
+        ))}
+        <Button variant="primary" onClick={addRecord}>
+          ＋ 面談記録を追加
+        </Button>
+      </Modal.Body>
+      <Modal.Footer className="justify-content-between">
+        <Button variant="danger" onClick={handleDelete} disabled={records.length === 0}>
+          この日の記録を全て削除
+        </Button>
+        <div>
+          <Button variant="secondary" className="me-2" onClick={onClose}>閉じる</Button>
+          <Button variant="primary" onClick={handleSave}>保存</Button>
         </div>
-      </div>
-    </div>
+      </Modal.Footer>
+    </Modal>
   );
 };
 
