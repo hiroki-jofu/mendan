@@ -1,16 +1,16 @@
 {
   "files": {
     "main.css": "/mendan/static/css/main.09f75c8e.css",
-    "main.js": "/mendan/static/js/main.ee032ffa.js",
+    "main.js": "/mendan/static/js/main.74143239.js",
     "static/js/453.437942cb.chunk.js": "/mendan/static/js/453.437942cb.chunk.js",
     "static/media/mendan-kiroku-logo.svg": "/mendan/static/media/mendan-kiroku-logo.3529619a293d3a4195c7f4a7460d15e8.svg",
     "index.html": "/mendan/index.html",
     "main.09f75c8e.css.map": "/mendan/static/css/main.09f75c8e.css.map",
-    "main.ee032ffa.js.map": "/mendan/static/js/main.ee032ffa.js.map",
+    "main.74143239.js.map": "/mendan/static/js/main.74143239.js.map",
     "453.437942cb.chunk.js.map": "/mendan/static/js/453.437942cb.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.09f75c8e.css",
-    "static/js/main.ee032ffa.js"
+    "static/js/main.74143239.js"
   ]
 }
